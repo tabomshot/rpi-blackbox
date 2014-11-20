@@ -137,27 +137,25 @@ static void* upload_routine (void* arg)
 // 2: convert
 void PI_MEMORY_BUFFER::write_frame_on_touched (u_int32_t* flag_touch)
 {
+    static const char header_common[] = {0x00, 0x00, 0x00, 0x01};
     static struct timespec spec;
 
     if (*flag_touch != 0 && writer_status == WRITER_STATUS_NONE) {
         // touch && no context: new writing context
         printf ("writing file ....\n");
 
-        if ((fp = fopen ("video.h264", "wb")) == NULL) {
+        if ((fp = fopen ("video.h264", "w")) == NULL) {
             fprintf (stderr, "cannot open \"video.h264\" "
                 "for temporary video buffer\n");
             exit (1);
         }
 
-        // write header
-        static char header_common[] = {0x00, 0x00, 0x00, 0x01};
-
+        // write header 
         // write sps
-        fwrite (header_common, 1, 4, fp);
+        fwrite (header_common, 1, sizeof (header_common), fp);
         fwrite (sps, 1, sps_len, fp);
-
         // write pps
-        fwrite (header_common, 1, 4, fp);
+        fwrite (header_common, 1, sizeof (header_common), fp);
         fwrite (pps, 1, pps_len, fp);
 
         // record time
@@ -176,12 +174,14 @@ void PI_MEMORY_BUFFER::write_frame_on_touched (u_int32_t* flag_touch)
             clock_gettime (CLOCK_MONOTONIC, &spec);
 
             if (spec.tv_sec*1000 + spec.tv_nsec/1.0e6 >= time_end) {
-                // time to call the muxer
+                // time to close file and call the muxer
+                fclose (fp);
                 pthread_create (&uploader_thread, 0, upload_routine, 0);
                 writer_status = WRITER_STATUS_UPLOADING;
 
             } else {
                 // keep writing frames
+                fwrite (header_common, 1, sizeof (header_common), fp);
                 fwrite (frame_data, 1, frame_data_len, fp);
             }
         } else {
