@@ -12,7 +12,7 @@ CFLAGS = -DSTANDALONE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS \
         -ftree-vectorize -pipe -g -Wall -fpermissive
 
 # general, openmax flags
-LDFLAGS = -L/opt/vc/lib -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lpthread -lstdc++
+LDFLAGS = -L/opt/vc/lib -lopenmaxil -lbcm_host -lvcos -lvchiq_arm -lpthread -lstdc++ -lrt -lwiringPi
 INCLUDES = -I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads \
         -I/opt/vc/include/interface/vmcs_host/linux
 

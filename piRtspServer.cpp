@@ -49,8 +49,7 @@ void* startRtspServer (void* arg)
 		estimatedSessionBandwidth, CNAME, videoSink, NULL, True);
 	
 
-	//RTSPServer* rtspServer = RTSPServer::createNew (*env, 8554);
-	RTSPServer* rtspServer = RTSPServer::createNew (*env, 8555);
+	RTSPServer* rtspServer = RTSPServer::createNew (*env, RTSP_PORTNUM);
 	if (rtspServer == NULL) {
 		*env << "Failed to create RTSP server: " << 
 			env->getResultMsg () << "\n";

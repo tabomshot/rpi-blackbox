@@ -9,9 +9,40 @@
 #include <IL/OMX_Broadcom.h>
 #include <pthread.h>
 
+#include <wiringPi.h>
+#include <wiringPiSPI.h>
+
+#define CS_MCP3208  6        // BCM_GPIO 25
+#define ADC_CHANNEL 0
+#define SPI_CHANNEL 0
+#define SPI_SPEED   1000000  // 1MHz
+#define ADC_INTERVAL 10 // 10usec
+#define TOUCH_THREASHOLD 3000
+
 #include "omx_dump.hh"
 #include "omx_utils.hh"
 #include "piRtspServer.hh"
+
+int read_mcp3208_adc (unsigned char adcChannel)
+{
+  unsigned char buff[3];
+  int adcValue = 0;
+
+  buff[0] = 0x06 | ((adcChannel & 0x07) >> 7);
+  buff[1] = ((adcChannel & 0x07) << 6);
+  buff[2] = 0x00;
+
+  digitalWrite(CS_MCP3208, 0);  // Low : CS Active
+
+  wiringPiSPIDataRW(SPI_CHANNEL, buff, 3);
+
+  buff[1] = 0x0F & buff[1];
+  adcValue = ( buff[1] << 8) | buff[2];
+
+  digitalWrite(CS_MCP3208, 1);  // High : CS Inactive
+
+  return adcValue;
+}
 
 void* capture_routine (void* arg)
 {
@@ -275,12 +306,34 @@ void* capture_routine (void* arg)
 
 int main (int argc, char** argv)
 {
-    u_int32_t touchflag = 0, i;
+    u_int32_t touchflag = 0;
     pthread_t capture_thread;
+	
+	// wiringPi init
+	if (wiringPiSetup () == -1) {
+		fprintf (stderr, "Unable to start wiringPi: %s\n", strerror (errno));
+		return 0;
+	}
+	
+	// wiringPi SPI init
+	if (wiringPiSPISetup (SPI_CHANNEL, SPI_SPEED) == -1) {
+		fprintf (stderr, "wiringPiSPISetup Failed: %s\n", strerror (errno));
+		return 0;
+	}
     
+	pinMode(CS_MCP3208, OUTPUT);
+	
     pthread_create (&capture_thread, 0, capture_routine, &touchflag);
-    sleep (5);
-    touchflag = 1;
+    
+    //touchflag = 1;
+	while (1) {
+		if (read_mcp3208_adc (ADC_CHANNEL) > TOUCH_THREASHOLD) {
+			touchflag = 1;
+		} else {
+			touchflag = 0;
+		}
+	}
+	
     pthread_join (capture_thread, 0);
 
 	return 0;

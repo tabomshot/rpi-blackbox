@@ -100,34 +100,70 @@ void PI_MEMORY_BUFFER::push_frame_data (void* in_data, u_int32_t data_len)
 
 static void* upload_routine (void* arg)
 {
-    int retval, status;
+    int status;
     pid_t pid;
 
+	// call muxer
     printf ("muxing mp4 ...\n");
     if ((pid = fork ()) >= 0) {
         if (pid == 0) {
-            // run MP4Box
-            // MP4Box -add video.h264 out.mp4
-            char* params[] = {"MP4Box", "-add", "video.h264", "out.mp4", NULL};
-            execvp ("MP4Box", params);
-            
+            // truncate target file to zero
+			fclose (fopen (write_out_filename, "w+"));
+			
+            // MP4Box -add video.h264 out.mp
+            execlp ("MP4Box", "MP4Box", "-add", "video.h264", write_out_filename, NULL);
+			
+			// execlp returns only if it fails to exec
+			fprintf (stderr, "cannot open mp4 muxer process... "
+				"you can install MP4Box by typing sudo apt-get install gpac\n");
+            return 0;
+			
         } else {
             // parent process
             // wait for the child process
             waitpid (pid, &status, 0);
             if ((status & 0xff) == 0) {
-                printf ("video \"%s\" saved successfully\n", "out.mp4");
+                printf ("video \"%s\" saved successfully\n", write_out_filename);
             } else {
                 printf ("mp4 muxer terminated unexpectedly\n");
             }
         }
     } else {
-        fprintf (stderr, "cannot create mp4 muxer process... "
-            "you can install MP4Box by typing sudo apt-get install gpac\n");
+        fprintf (stderr, "cannot create mp4 muxer process...\n");
         return 0;
     }
 
+	// call curl
     printf ("uploading ...\n");
+	if ((pid = fork ()) >= 0) {
+		if (pid == 0) {
+			//curl -v -include -F"operation=upload" -F"uploaded_file=@out.mp4" http://165.194.35.128/~jq/up_test.php
+			char upload_form[256];
+			//sprintf (upload_form, "-F\"uploaded_file=@%s", write_out_filename);
+			//execlp ("curl", "curl", "-v", "-include", "-F\"operation=upload", 
+			//	upload_form, video_upload_server_url, NULL);
+			sprintf (upload_form, "uploaded_file=@%s", write_out_filename);
+			execlp ("curl", "curl", "-v", "-include", "-F", "operation=upload",
+				"-F", upload_form, video_upload_server_url, NULL);
+			
+			// execlp returns only if it fails to exec
+			fprintf (stderr, "cannot open curl process for uploading ...\n");
+            return 0;
+			
+		} else {
+			// parent process
+            // wait for the child process
+            waitpid (pid, &status, 0);
+            if ((status & 0xff) == 0) {
+                printf ("video \"%s\" saved successfully\n", write_out_filename);
+            } else {
+                printf ("mp4 muxer terminated unexpectedly\n");
+            }
+		}
+	} else {
+		fprintf (stderr, "cannot create curl process...\n");
+        return 0;
+	}
 
     return 0;
 }
@@ -144,7 +180,7 @@ void PI_MEMORY_BUFFER::write_frame_on_touched (u_int32_t* flag_touch)
         // touch && no context: new writing context
         printf ("writing file ....\n");
 
-        if ((fp = fopen ("video.h264", "w")) == NULL) {
+        if ((fp = fopen ("video.h264", "w+")) == NULL) {
             fprintf (stderr, "cannot open \"video.h264\" "
                 "for temporary video buffer\n");
             exit (1);
@@ -164,7 +200,7 @@ void PI_MEMORY_BUFFER::write_frame_on_touched (u_int32_t* flag_touch)
         time_end = time_now + WRITER_RECORDING_MILLISEC;
 
         // status transition
-        (*flag_touch) = 0;
+        //(*flag_touch) = 0;
         writer_status = WRITER_STATUS_WRITING;
 
     } else if (writer_status != WRITER_STATUS_NONE) {

@@ -16,12 +16,15 @@
 #define PARAMETER_SET_MAX 64
 #define RTSP_INPUT_BUFFER_MAX 300000
 
-#define WRITER_RECORDING_MILLISEC 3000 // 3 secs 
+#define WRITER_RECORDING_MILLISEC 5000
 #define WRITER_STATUS_NONE 0
 #define WRITER_STATUS_WRITING 1
 #define WRITER_STATUS_UPLOADING 2
 #define UPLOADER_STATUS_RUNNING 0
 #define UPLOADER_STATUS_DONE 1
+
+const char write_out_filename[] = "out.mp4";
+const char video_upload_server_url[] = "http://165.194.35.128/~jq/up_test.php";
 
 class PI_MEMORY_BUFFER
 {
