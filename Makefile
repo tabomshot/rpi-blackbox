@@ -25,6 +25,7 @@ SRCS = picam_rtsp.cpp \
 		omx_utils.cpp \
 		omx_dump.cpp \
 		piRtspServer.cpp \
+		piSendEvent.cpp \
 		piMemoryBufferType.cpp \
 		piMemoryBufferedSource.cpp
 
@@ -32,6 +33,7 @@ OBJS = picam_rtsp.o \
 		omx_utils.o \
 		omx_dump.o \
 		piRtspServer.o \
+		piSendEvent.o \
 		piMemoryBufferType.o \
 		piMemoryBufferedSource.o
 

@@ -10,7 +10,6 @@
 
 // this function never returns
 // global image frame buffer as an arg
-
 #define RTSP_PORTNUM 8554
 void* startRtspServer (void* arg);
 

@@ -22,6 +22,7 @@
 #include "omx_dump.hh"
 #include "omx_utils.hh"
 #include "piRtspServer.hh"
+#include "piSendEvent.hh"
 
 int read_mcp3208_adc (unsigned char adcChannel)
 {
@@ -228,6 +229,9 @@ void* capture_routine (void* arg)
         fprintf (stderr, "error: pthread_create: %d\n", ret);
         exit (1);
     }
+	
+	// sending server-launched event
+	send_event_launched ();
     
     // Capturing loop
     while (1) {

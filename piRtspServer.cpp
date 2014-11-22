@@ -1,6 +1,5 @@
 #include "piRtspServer.hh"
 
-
 void* startRtspServer (void* arg)
 {
 	// Begin by setting up our usage environment

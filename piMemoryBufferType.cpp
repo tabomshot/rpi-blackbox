@@ -1,5 +1,5 @@
 #include "piMemoryBufferType.hh"
-
+#include "piSendEvent.hh"
 
 PI_MEMORY_BUFFER::PI_MEMORY_BUFFER (u_int32_t duration)
 : frameduration (duration), frame_data_len (0), temp_data_len (0), writer_status (0)
@@ -155,9 +155,9 @@ static void* upload_routine (void* arg)
             // wait for the child process
             waitpid (pid, &status, 0);
             if ((status & 0xff) == 0) {
-                printf ("video \"%s\" saved successfully\n", write_out_filename);
+                //printf ("video \"%s\" saved successfully\n", write_out_filename);
             } else {
-                printf ("mp4 muxer terminated unexpectedly\n");
+                //printf ("mp4 muxer terminated unexpectedly\n");
             }
 		}
 	} else {
@@ -178,6 +178,8 @@ void PI_MEMORY_BUFFER::write_frame_on_touched (u_int32_t* flag_touch)
 
     if (*flag_touch != 0 && writer_status == WRITER_STATUS_NONE) {
         // touch && no context: new writing context
+		send_event_touched ();
+		
         printf ("writing file ....\n");
 
         if ((fp = fopen ("video.h264", "w+")) == NULL) {
@@ -188,11 +190,13 @@ void PI_MEMORY_BUFFER::write_frame_on_touched (u_int32_t* flag_touch)
 
         // write header 
         // write sps
+		vcos_mutex_lock (&spspps_lock);
         fwrite (header_common, 1, sizeof (header_common), fp);
         fwrite (sps, 1, sps_len, fp);
         // write pps
         fwrite (header_common, 1, sizeof (header_common), fp);
         fwrite (pps, 1, pps_len, fp);
+		vcos_mutex_unlock (&spspps_lock);
 
         // record time
         clock_gettime (CLOCK_MONOTONIC, &spec);
@@ -217,8 +221,12 @@ void PI_MEMORY_BUFFER::write_frame_on_touched (u_int32_t* flag_touch)
 
             } else {
                 // keep writing frames
-                fwrite (header_common, 1, sizeof (header_common), fp);
-                fwrite (frame_data, 1, frame_data_len, fp);
+				if (frame_data_len > 0) {
+					vcos_mutex_lock (&buffer_lock);
+					fwrite (header_common, 1, sizeof (header_common), fp);
+					fwrite (frame_data, 1, frame_data_len, fp);
+					vcos_mutex_unlock (&buffer_lock);
+				}
             }
         } else {
             // currently uploading and converting
